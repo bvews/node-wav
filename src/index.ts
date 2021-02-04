@@ -1,9 +1,23 @@
 /* -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
 
-'use strict';
+type Decoder = (buffer: ArrayBuffer, offset: number, output: Float32Array[], channels: number, samples: number) => void;
+type Encoder = (buffer: ArrayBuffer, offset: number, input: Float32Array[], channels: number, samples: number) => void;
+type TypedArray = | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 
-const data_decoders = {
+interface WavData {
+  sampleRate: number;
+  channelData: Float32Array[];
+}
+
+interface Options {
+  sampleRate: number;
+  bitDepth: number;
+  float?: boolean;
+  floatingPoint?: boolean;
+}
+
+const data_decoders: { [name: string]: Decoder } = {
   pcm8: (buffer, offset, output, channels, samples) => {
     let input = new Uint8Array(buffer, offset);
     let pos = 0;
@@ -118,7 +132,7 @@ const data_encoders = {
     let pos = 0;
     for (let i = 0; i < samples; ++i) {
       for (let ch = 0; ch < channels; ++ch) {
-        let v = Math.max(-1, Math.min(input[ch][i], 1));        
+        let v = Math.max(-1, Math.min(input[ch][i], 1));
         output[pos++] = v;
       }
     }
@@ -128,14 +142,14 @@ const data_encoders = {
     let pos = 0;
     for (let i = 0; i < samples; ++i) {
       for (let ch = 0; ch < channels; ++ch) {
-        let v = Math.max(-1, Math.min(input[ch][i], 1));        
+        let v = Math.max(-1, Math.min(input[ch][i], 1));
         output[pos++] = v;
       }
     }
   },
 };
 
-function lookup(table, bitDepth, floatingPoint) {
+function lookup(table: { [key: string]: Decoder | Encoder }, bitDepth: number, floatingPoint: boolean) {
   let name = 'pcm' + bitDepth + (floatingPoint ? 'f' : '');
   let fn = table[name];
   if (!fn)
@@ -143,7 +157,7 @@ function lookup(table, bitDepth, floatingPoint) {
   return fn;
 }
 
-function decode(buffer) {
+function decode(buffer: Buffer | TypedArray | ArrayBuffer): WavData | undefined {
   let pos = 0, end = 0;
   if (buffer.buffer) {
     // If we are handed a typed array or a buffer, then we have to consider the
@@ -160,25 +174,25 @@ function decode(buffer) {
 
   let v = new DataView(buffer);
 
-  function u8() {
+  function u8(): number {
     let x = v.getUint8(pos);
     pos++;
     return x;
   }
 
-  function u16() {
+  function u16(): number {
     let x = v.getUint16(pos, true);
     pos += 2;
     return x;
   }
 
-  function u32() {
+  function u32(): number {
     let x = v.getUint32(pos, true);
     pos += 4;
     return x;
   }
 
-  function string(len) {
+  function string(len: number): string {
     let str = '';
     for (let i = 0; i < len; ++i)
       str += String.fromCharCode(u8());
@@ -232,7 +246,7 @@ function decode(buffer) {
   }
 }
 
-function encode(channelData, opts) {
+function encode(channelData: Float32Array[], opts: Options): Buffer {
   let sampleRate = opts.sampleRate || 16000;
   let floatingPoint = !!(opts.float || opts.floatingPoint);
   let bitDepth = floatingPoint ? 32 : ((opts.bitDepth | 0) || 16);
@@ -243,21 +257,21 @@ function encode(channelData, opts) {
   let v = new DataView(buffer);
   let pos = 0;
 
-  function u8(x) {
+  function u8(x: number): void {
     v.setUint8(pos++, x);
   }
 
-  function u16(x) {
+  function u16(x: number): void {
     v.setUint16(pos, x, true);
     pos += 2;
   }
 
-  function u32(x) {
+  function u32(x: number): void {
     v.setUint32(pos, x, true);
     pos += 4;
   }
   
-  function string(s) {
+  function string(s: string): void {
     for (var i = 0; i < s.length; ++i)
       u8(s.charCodeAt(i));
   }
