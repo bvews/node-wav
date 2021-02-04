@@ -247,7 +247,13 @@ function decode(buffer: Buffer | TypedArray | ArrayBuffer): WavData | undefined 
 }
 
 function encode(channelData: Float32Array[], opts: Options): Buffer {
-  return Buffer.from(encodeAsArrayBuffer(channelData, opts));
+  if (typeof window !== 'undefined' || typeof process === 'undefined') {
+    // Called from browsers
+    new Error('"encode" function can not be called from browser environment.');
+  } else {
+    // Called from Node.js
+    return Buffer.from(encodeAsArrayBuffer(channelData, opts));
+  }
 }
 
 function encodeAsArrayBuffer(channelData: Float32Array[], opts: Options): ArrayBuffer {
