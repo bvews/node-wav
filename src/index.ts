@@ -247,6 +247,10 @@ function decode(buffer: Buffer | TypedArray | ArrayBuffer): WavData | undefined 
 }
 
 function encode(channelData: Float32Array[], opts: Options): Buffer {
+  return Buffer.from(encodeAsArrayBuffer(channelData, opts));
+}
+
+function encodeAsArrayBuffer(channelData: Float32Array[], opts: Options): ArrayBuffer {
   let sampleRate = opts.sampleRate || 16000;
   let floatingPoint = !!(opts.float || opts.floatingPoint);
   let bitDepth = floatingPoint ? 32 : ((opts.bitDepth | 0) || 16);
@@ -296,10 +300,11 @@ function encode(channelData: Float32Array[], opts: Options): Buffer {
   u32(buffer.byteLength - 44);
   lookup(data_encoders, bitDepth, floatingPoint)(buffer, pos, channelData, channels, samples);
 
-  return Buffer.from(buffer);
+  return buffer;
 }
 
 module.exports = {
   decode: decode,
   encode: encode,
+  encodeAsArrayBuffer: encodeAsArrayBuffer,
 };
