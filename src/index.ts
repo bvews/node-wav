@@ -159,7 +159,7 @@ function lookup(table: { [key: string]: Decoder | Encoder }, bitDepth: number, f
 
 function decode(buffer: Buffer | TypedArray | ArrayBuffer): WavData | undefined {
   let pos = 0, end = 0;
-  if (buffer.buffer) {
+  if ('buffer' in buffer) {
     // If we are handed a typed array or a buffer, then we have to consider the
     // offset and length into the underlying array buffer.
     pos = buffer.byteOffset;
